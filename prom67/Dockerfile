@@ -2,7 +2,7 @@
 # Image for ProM 6
 #
 
-FROM prom:base
+FROM zhicwu/prom:base
 
 LABEL maintainer="zhicwu@gmail.com"
 
