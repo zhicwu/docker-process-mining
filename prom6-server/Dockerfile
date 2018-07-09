@@ -2,7 +2,7 @@
 # Image for ProM Server
 #
 
-FROM zhicwu/prom:6
+FROM zhicwu/prom:6.8
 
 ENV GROOVY_HOME=$PROM_HOME/groovy GROOVY_VERSION=2.5.0 START_SERVER_SCRIPT=startServer.sh \
     APACHE_BASE_URL=https://dist.apache.org/repos/dist/release

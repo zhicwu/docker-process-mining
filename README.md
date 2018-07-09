@@ -41,7 +41,7 @@ All credit goes to who contributed to ProM, an amazing tool for process mining.
 
 * Run in Server Mode([sample script](/prom6-server/content/scripts/test.groovy))
     ```bash
-    $ docker run --rm -it -p1234:1234 -p5678:5678 -p5900:5900 zhicwu/prom-server:6
+    $ docker run --rm -it -p1234:1234 -p5678:5678 -p5900:5900 zhicwu/prom:6-server
     .
     .
     .
