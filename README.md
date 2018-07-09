@@ -61,5 +61,6 @@ All credit goes to who contributed to ProM, an amazing tool for process mining.
 - [x] ~~Dockerize ProM~~
 - [x] ~~Use Groovy instead of JavaScript or BeanShell for scripting~~
 - [x] ~~Embedded lightweight web server and REST APIs~~
-- [ ] Streaming
+- [ ] Async mode
 - [ ] Inductive mining
+- [ ] Streaming
