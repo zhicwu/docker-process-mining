@@ -39,19 +39,19 @@ All credit goes to who contributed to ProM, an amazing tool for process mining.
     # ./docker-entrypoint.sh install.js
     ```
 
-* Run in Server Mode([sample script](/prom6-server/content/scripts/test.groovy))
+* Run in Server Mode([examples](/prom6-server/content/scripts/))
     ```bash
     $ docker run --rm -it -p1234:1234 -p5678:5678 -p5900:5900 zhicwu/prom:6-server
     .
     .
     .
-    Starting service http://localhost:5678/script...
-    $ time curl http://localhost:5678/script?file=test
-    {"id":"dd27f950-4522-41dc-aad3-d43b0e8fda74","script":"test.groovy","result":2333}
-    real	0m3.875s
-    user	0m0.021s
-    sys	0m0.007s
-    $ curl -X POST -d'println 2333' http://localhost:5678/script?file=mine
+    Starting server... open your browser and navigate to http://localhost:5678/
+    $ time curl http://localhost:5678/script?file=example-efficient-tree
+    {"id":"879d9fbc-f914-4313-b98c-152a7225b91b","script":"example-efficient-tree.groovy","finished":true, "expireAt":"2018-07-12T12:39:09.368Z","result":null,"files":["efficient-tree.txt","efficient-tree.dot"]}
+    real	0m2.922s
+    user	0m0.015s
+    sys	0m0.008s
+    $ curl -d'println 2333' http://localhost:5678/script?file=mine
     ...
     $ curl http://localhost:5678/script?file=mine
     ```
@@ -61,6 +61,8 @@ All credit goes to who contributed to ProM, an amazing tool for process mining.
 - [x] ~~Dockerize ProM~~
 - [x] ~~Use Groovy instead of JavaScript or BeanShell for scripting~~
 - [x] ~~Embedded lightweight web server and REST APIs~~
-- [ ] Async mode
-- [ ] Inductive mining
+- [x] ~~Async mode~~
+- [x] ~~Configurable web server~~
+- [x] ~~General output object~~
+- [x] ~~Serve static files~~
 - [ ] Streaming

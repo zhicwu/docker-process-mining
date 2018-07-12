@@ -1,3 +1,5 @@
+import groovy.transform.Field
+
 import org.processmining.framework.boot.Boot
 import org.processmining.framework.packages.PackageManager
 import org.processmining.framework.plugin.PluginContext
@@ -130,7 +132,10 @@ def buildParameters(parameterTypes, addType = false) {
     return sb.toString()
 }
 
-if (binding.hasVariable('PROM_CLASS_LOADER')) {
+/**
+ * Initialize ProM runtime by loading all packages and plugins.
+ */
+def initProM() {
     println("* Initializing...")
 
     def defaultUrls = PROM_CLASS_LOADER.getURLs()
@@ -141,6 +146,7 @@ if (binding.hasVariable('PROM_CLASS_LOADER')) {
 
     println("* Loading plugins...")
     def pluginCache = [:]
+    // this is tricky as we want a cache shared across multiple groovyshells
     PluginManagerImpl.metaClass.static.cache = { key, value = null ->
         if (value == null) {
             return pluginCache[key]
@@ -169,91 +175,99 @@ if (binding.hasVariable('PROM_CLASS_LOADER')) {
     }
 
     pluginCache[null] = plugins.getAllPlugins()
-
-    return
 }
 
-binding.setVariable('__plugin_context', new CLIContext().mainPluginContext)
-binding.setVariable('__plugin_manager', PluginManagerImpl.getInstance())
+/**
+ * Initialize context for each request.
+ */
+def initContext() {
+    binding.setVariable('__plugin_context', new CLIContext().mainPluginContext)
+    binding.setVariable('__plugin_manager', PluginManagerImpl.getInstance())
 
-binding.setVariable('prom', { String method, ... args ->
-    if (!method) {
-        throw new MissingMethodException("Please specify non-empty method name to proceed.")
-    }
+    binding.setVariable('prom', { String method, ... args ->
+        if (!method) {
+            throw new MissingMethodException("Please specify non-empty method name to proceed.")
+        }
 
-    int argsLength = args.length
+        int argsLength = args.length
 
-    def results = null
+        def results = null
 
-    def plugins = __plugin_manager.cache(method)
-    if (plugins == null) {
-        plugins = __plugin_manager.cache(null)
-    }
+        def plugins = __plugin_manager.cache(method)
+        if (plugins == null) {
+            plugins = __plugin_manager.cache(null)
+        }
 
-    plugins.each { plugin ->
-        int methodIndex = 0
-        plugin.parameterTypes.each { p ->
-            Signature signature = getSignature(plugin, p)
-            def paramTypes = signature.parameterTypes
-            if (method == signature.name && argsLength == paramTypes.size()) {
-                boolean matched = true;
-                int argIndex = 0
-                paramTypes.each {
-                    if (!it.isAssignableFrom(args[argIndex++]?.getClass())) {
-                        matched = false;
+        plugins.each { plugin ->
+            int methodIndex = 0
+            plugin.parameterTypes.each { p ->
+                Signature signature = getSignature(plugin, p)
+                if (argsLength == p.size() && method == signature.name) {
+                    boolean matched = true;
+                    int argIndex = 0
+                    p.each {
+                        if (!it.isAssignableFrom(args[argIndex++]?.class)) {
+                            matched = false;
+                            return
+                        }
+                    }
+
+                    if (matched) {
+                        println("* Calling method #${methodIndex} ${signature.name}(${buildParameters(p, true)})...")
+
+                        def cachedPlugins = __plugin_manager.cache(method)
+                        if (cachedPlugins) {
+                            boolean duplicated = false
+                            cachedPlugins.each { x ->
+                                if (x.ID == plugin.ID) {
+                                    duplicated = true
+                                    return
+                                }
+                            }
+
+                            if (!duplicated) {
+                                cachedPlugins.add(plugin)
+                            }
+                        } else {
+                            __plugin_manager.cache(method, [plugin])
+                        }
+
+                        results = plugin.invoke(methodIndex, __plugin_context.createChildContext("Result of ${signature.name}"), args)
                         return
                     }
                 }
 
-                if (matched) {
-                    println("* Calling method #${methodIndex} ${signature.name}(${buildParameters(signature.parameterTypes, true)})...")
+                methodIndex++
+            }
+        }
 
-                    def cachedPlugins = __plugin_manager.cache(method)
-                    if (cachedPlugins) {
-                        boolean duplicated = false
-                        cachedPlugins.each { x ->
-                            if (x.ID == plugin.ID) {
-                                duplicated = true
-                                return
-                            }
-                        }
+        if (results == null) {
+            def methods = []
+            plugins.each { plugin ->
+                plugin.parameterTypes.each { p ->
+                    Signature signature = getSignature(plugin, p)
 
-                        if (!duplicated) {
-                            cachedPlugins.add(plugin)
-                        }
-                    } else {
-                        __plugin_manager.cache(method, [plugin])
+                    // FIXME based on similarity of method signature
+                    if (method == signature.name) {
+                        methods.add(" - ${signature.name}(${buildParameters(p, true)})")
                     }
-
-                    results = plugin.invoke(methodIndex, __plugin_context.createChildContext("Result of ${signature.name}"), args)
-                    return
                 }
             }
-
-            methodIndex++
+            throw new MissingMethodException(
+                "Method '${method}' not found! Possible solutions:\n${methods ? methods.join('\n') : ' - N/A'}")
         }
-    }
 
-    if (results == null) {
-        def methods = []
-        plugins.each { plugin ->
-            plugin.parameterTypes.each { paramType ->
-                Signature signature = getSignature(plugin, paramType)
+        results.synchronize()
 
-                // FIXME based on similarity of method signature
-                if (method == signature.name) {
-                    methods.add(" - ${signature.name}(${buildParameters(signature.parameterTypes, true)})")
-                }
-            }
-        }
-        throw new MissingMethodException(
-            "Method '${method}' not found! Possible solutions:\n${methods ? methods.join('\n') : ' - N/A'}")
-    }
+        return results.expectedSize == 1 ? results.getResult(0) : results.results
+    })
+}
 
-    results.synchronize()
-
-    return results.expectedSize == 1 ? results.getResult(0) : results.results
-})
+if (binding.hasVariable('PROM_CLASS_LOADER')) {
+    initProM()
+} else {
+    initContext()
+}
 
 /* slow and inefficient...
 new File(PROM_CONTEXT_SCRIPT).withWriter(PROM_ENCODING) { w ->

@@ -5,11 +5,13 @@
 FROM zhicwu/prom:6.8
 
 ENV GROOVY_HOME=$PROM_HOME/groovy GROOVY_VERSION=2.5.0 START_SERVER_SCRIPT=startServer.sh \
-    APACHE_BASE_URL=https://dist.apache.org/repos/dist/release
+    APACHE_BASE_URL=https://dist.apache.org/repos/dist/release CAFFEINE_VERSION=2.6.2
 
 RUN wget --progress=dot:giga $APACHE_BASE_URL/groovy/$GROOVY_VERSION/distribution/apache-groovy-binary-$GROOVY_VERSION.zip \
+        $MAVEN_BASE_URL/com/github/ben-manes/caffeine/caffeine/$CAFFEINE_VERSION/caffeine-$CAFFEINE_VERSION.jar \
     && unzip *.zip \
     && mv groovy* $GROOVY_HOME \
+    && mv caffeine*.jar $GROOVY_HOME/lib/ \
     && rm -f *.zip $GROOVY_HOME/bin/*.bat \
     && echo "JAVA_HOME=$JAVA_HOME" >> $PROM_HOME/.bashrc \
     && echo "PROM_HOME=$PROM_HOME" >> $PROM_HOME/.bashrc \

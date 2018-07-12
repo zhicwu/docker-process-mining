@@ -16,7 +16,8 @@ def net = net_and_marking[0]
 def marking = net_and_marking[1]
 
 println("Saving net")
-File net_file = new File("/tmp/mined_net.pnml")
-prom('pnml_export_petri_net_', net, net_file)
+
+// newFile is a shortcut of new File("${TMP_DIR}/${PROM_REQUEST_ID}/<file>") and adding it to output list
+prom('pnml_export_petri_net_', net, newFile("mined_net.pnml"))
 
 return 2333
